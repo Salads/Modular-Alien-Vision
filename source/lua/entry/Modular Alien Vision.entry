@@ -1,0 +1,9 @@
+Print("$ Loaded MAV Entry!")
+
+modEntry = {
+    --Client = "lua/FCClient.lua",
+    --Server = "lua/FCServer.lua",
+    --Shared = "lua/FCShared.lua",
+    FileHooks = "lua/MAV_Filehooks.lua",
+    Priority = 1
+}

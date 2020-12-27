@@ -1,0 +1,13 @@
+name        = "Modular Alien Vision"
+source_dir  = "source/"
+output_dir  = "output/"
+description = [=[This is a mod meant to run on both Client and Server.
+
+Clients will be able to switch between and configure their alien visions while in-game.
+
+Server will handle consistency checking for the different alien visions (if they are different names than the DarkVision vanilla uses), and optionally use a whitelist/blacklist to block/allow certain alien visions from being used on the client, if desired.
+
+More Info]=]
+image       = "preview.jpg"
+tag_modtype = "Alien Vision"
+tag_support = "Must be run on Server"

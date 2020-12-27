@@ -1,3 +1,8 @@
+# User Files from IntelliJ
+vcs.xml
+source.iml
+modules.xml
+
 # Compiled Lua sources
 luac.out
 

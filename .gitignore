@@ -1,3 +1,6 @@
+# Spark Launchpad Output (We only care about source)
+output/ 
+ 
 # User Files from IntelliJ
 vcs.xml
 source.iml

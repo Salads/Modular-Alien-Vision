@@ -5,6 +5,7 @@ output/
 vcs.xml
 source.iml
 modules.xml
+.idea/
 
 # Compiled Lua sources
 luac.out

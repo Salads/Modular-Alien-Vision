@@ -1,6 +1,6 @@
 name        = "Modular Alien Vision"
-source_dir  = "source/"
-output_dir  = "output/"
+source_dir  = "source"
+output_dir  = "output"
 description = [=[This is a mod meant to run on both Client and Server.
 
 Clients will be able to switch between and configure their alien visions while in-game.

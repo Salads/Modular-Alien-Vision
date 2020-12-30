@@ -17,8 +17,8 @@ Print("$ Loaded MAV_Interface.lua")
                                 default = "Default value of the parameter.",
                                 guiType = "Name of the user control to use for this parameter. ( 'slider', 'dropdown', 'checkbox', 'color' )",
 
-                                -- OPTIONAL, but if one is specified, all must be for the respective parameter.
-                                bitfieldIdentifier = "If this is filled out, then this parameter will be set as a 0/1 in a bitfield specified by this variable.",
+                                -- OPTIONAL, but if one is specified, all bitfield-related stuff must be for the respective parameter.
+                                bitfieldId = "If this is filled out, then this parameter will be set as a 0/1 in a bitfield specified by this variable.",
                                 bitfieldIndex = "The bit index that this parameter should set. 20 MAX. (Safe(er?) side of c++ floating point decimal unit capacity)",
 
                                 -- OPTIONAL common members.
@@ -73,7 +73,14 @@ local function ProcessInterfaceFile(avTable)
             return false
         end
 
-    -- TODO(Salads): Read and validate all of the decoded json here.
+        -- TODO(Salads): Read and validate all of the decoded json here.
+        avTable.interfaceData = {}
+        if decodedInterface.Parameters then
+            for i = 1, #decodedInterface.Parameters do
+                table.insert(avTable.interfaceData, decodedInterface[i])
+            end
+        end
+        -- Its possible that a AV doesn't need any parameters.
 
     else
         Log("ERROR: Could not open interface file for AV: %s!", avTable.id)
@@ -83,35 +90,50 @@ local function ProcessInterfaceFile(avTable)
     return false
 end
 
-local function ValidateAVTable(table)
+local kAVFileTypes = set
+{
+    "screenfx",
+    "shader",
+    "hlsl",
+    "interface"
+}
 
-    local result = true
+-- These are identifiers that are forbidden due to that member name being used
+-- for some other purpose.
+local kReservedIdentifiers = set
+{
+    "_skippedFiles" -- For debug information.
+}
 
-    -- NOTE(Salads): It's possible that the author wants to use the vanilla hlsl and shader files.
-    -- Just let the shader fail if they did something wrong in that case.
-    -- Still need interface file, though.
-    if not table.screenfx or not table.interface then
-        result = false
-    else
-        result = ProcessInterfaceFile(table)
-    end
+kValidStatus = enum(
+{
+    'Valid',
+    'MissingScreenFX',
+    'InvalidParameter'
+})
 
-    return result
-end
+kSkippedFileReason = enum(
+{
+    'UsedReservedId',
+    'NoIdentifier'
+})
 
 --[[
-        Puts all the files from each AV folder into their respective table,
-        each file being assigned to a specific named member in the table.
-
-        If a AV-specific table is not valid somehow, this will print out a
-        error message a skip the av altogether.
+        Puts all the files from each MAV folder into their respective table,
+        each relevant file being assigned to a specific named member in the table.
 
         Finally, a table containing those AV-specific tables are returned.
+
+        Validity checking of AV folders will be done after this compile step,
+        however even then invalid AVs will still be passed along, so that we can
+        have a nice thing that shows people debug information trying to get their AV mod working with MAV
 --]]
 function MAVCompileFiles(files)
 
-    local resultTable = {}
-    local avFoldersByIdentifier = {}
+    local resultTable =
+    {
+        _skippedFiles = {}
+    }
 
     -- Group up all the files by their parent folder. (identifier)
     for i = 1, #files do
@@ -120,35 +142,41 @@ function MAVCompileFiles(files)
         local fileAVIdentifier = MAVGetIdentifierFromPath(file)
         if fileAVIdentifier then
 
-            -- Make sure the entry exists
-            if not avFoldersByIdentifier[fileAVIdentifier] then
-                avFoldersByIdentifier[fileAVIdentifier] =
-                {
-                    id = fileAVIdentifier
-                }
+            local shouldAddTable = true
+            if kReservedIdentifiers[fileAVIdentifier] then
+                table.insert(resultTable._skippedFiles, { skippedFile = file, reason = kSkippedFileReason.UsedReservedId })
+                shouldAddTable = false
             end
 
-            local avTable = avFoldersByIdentifier[fileAVIdentifier]
-            local extension = file:gsub(".*[.]", "")
-            if extension then
+            if shouldAddTable then
 
-                if kAVFileTypes[extension:lower()] then
-                    avTable[extension] = file
-                else
-                    Log("WARNING: Invalid Extension! File: '%s', Extension: '%s' ... Ignoring", file, extension)
+                -- Make sure the entry exists
+                if not resultTable[fileAVIdentifier] then
+                    resultTable[fileAVIdentifier] =
+                    {
+                        id = fileAVIdentifier,
+                        status = kValidStatus.Valid,
+                        parameterErrors = {},
+                        ignoredFiles = {},
+                    }
+                end
+
+                local avTable = resultTable[fileAVIdentifier]
+                local extension = file:gsub(".*[.]", "")
+                if extension then
+
+                    if kAVFileTypes[extension:lower()] then
+                        avTable[extension] = file
+                    else
+                        table.insert(avTable.ignoredFiles, file)
+                    end
+
                 end
 
             end
 
-        end
-
-    end
-
-    -- Validate all of the AV tables, and add them to their respective result tables.
-    for _, avTable in pairs(avFoldersByIdentifier) do
-
-        if ValidateAVTable(avTable) then
-            table.insert(resultTable, avTable)
+        else
+            table.insert(resultTable._skippedFiles, { skippedFile = file, reason = kSkippedFileReason.NoIdentifier })
         end
 
     end
@@ -163,7 +191,6 @@ function MAVGetIdentifierFromPath(path)
     if matchedStr then
         return matchedStr:gsub("/", "")
     else
-        Log("ERROR: File '%s' is in the incorrect location!")
         return nil
     end
 
@@ -174,16 +201,18 @@ function MAVGetModFiles()
 
     --[[
         NOTE(Salads): Shared.GetMatchingFileNames uses FindFirstFileW, which is technically a single-directory search,
-        so it cannot have multiple wildcards in the directory part, only the filename part.
+        so it cannot have wildcards in the directory part, only the filename part. (Thanks, Ray!)
+
+        However, the recursive flag passed into it makes the Spark Engine search all the directories and it's subfolders!
     --]]
 
     local MAVFiles = {}
     Shared.GetMatchingFileNames( "DarkVision*", true, MAVFiles )
 
-    -- Remove all of the matching filenames that don't have "MAV" in them.
+    -- Remove all of the matching filenames that don't have the correct file structure.
+    -- Ex: MAV/any_folder_name/DarkVision.*
+    -- where any_folder_name is the name the AV will be referenced by.
     for i = #MAVFiles, 1, -1 do
-
-        Print("> Matching Filename: %s", MAVFiles[i])
         if not MAVFiles[i]:match'^MAV/([^/]+)/DarkVision[.]([^/]+)$' then
             table.remove(MAVFiles, i)
         end
@@ -196,37 +225,11 @@ end
 function MAVRefreshAVSources()
 
     local files = MAVGetModFiles()
-    local validAVs = MAVCompileFiles(files)
+    local avTables = MAVCompileFiles(files)
 
+    GetMAV()._AVTables = avTables
 
+    -- TODO(Salads): Generate GUIConfigs for all of the AVs!
 
 
 end
-
-function MAVTestAVRefresh()
-
-    Print("$ Getting Filenames")
-    local files = MAVGetModFiles()
-
-    if #files == 0 then
-        Print("\tNo Files Found!")
-    end
-
-    for i = 1, #files do
-        local file = files[i]
-        Print("\tFile: %s, Identifier: %s", file, MAVGetIdentifierFromPath(file))
-    end
-
-    local validAVs = MAVCompileFiles(files)
-    Print("$ Printing Valid AVs")
-    for _, v in ipairs(validAVs) do
-        Print("\t%s", v.id)
-        for k, v2 in pairs(v) do
-            if k ~= "id" then
-                Print("\t\t%s: %s", k, v2)
-            end
-        end
-    end
-
-end
-

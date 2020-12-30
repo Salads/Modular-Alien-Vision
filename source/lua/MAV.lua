@@ -1,7 +1,7 @@
 
 Print("$ Loaded MAV.lua")
 
-Script.Load("lua/MAV_Interface.lua")
+Script.Load("lua/MAV_FileFetch.lua")
 
 local MAV
 function GetMAV()

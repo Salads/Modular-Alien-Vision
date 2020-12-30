@@ -1,7 +1,7 @@
 
 -- Defines stuff related to interfacing a alien vision mod with MAV.
 
-Print("$ Loaded MAV_Interface.lua")
+Print("$ Loaded MAV_FileFetch.lua")
 
 -- NOTE(Salads): Example JSON Structure for an interface file.
 --[[

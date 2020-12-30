@@ -221,15 +221,3 @@ function MAVGetModFiles()
     return MAVFiles
 
 end
-
-function MAVRefreshAVSources()
-
-    local files = MAVGetModFiles()
-    local avTables = MAVCompileFiles(files)
-
-    GetMAV()._AVTables = avTables
-
-    -- TODO(Salads): Generate GUIConfigs for all of the AVs!
-
-
-end

@@ -8,7 +8,7 @@ Vanilla_AlienUpdateClientEffects = Class_ReplaceMethod( "Alien", "UpdateClientEf
 
         Vanilla_AlienUpdateClientEffects(self, deltaTime, isLocal)
 
-        -- TODO(Salads): Apply additional Alien Vision parameters here.
+        -- FUTURE(Salads): Apply additional Alien Vision parameters here. (Real-Time AV Settings)
 
     end
 )

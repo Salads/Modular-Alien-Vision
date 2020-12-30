@@ -8,13 +8,6 @@ Print("$ Loaded MAV_Interface.lua")
 
     { -- Root JSON Object.
 
-          -- Specify bitfield names.
-          "BitFields" : [
-                           "coolbitfield",
-                           "yeahanotherone",
-                           "woahwhatsthisanotheronethatssick"
-                        ],
-
           "Parameters" : [
                             { -- Each Parameter is a JSON Object. Here is a description for each member.
 

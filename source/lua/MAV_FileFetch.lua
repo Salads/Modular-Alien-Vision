@@ -3,48 +3,7 @@
 
 Print("$ Loaded MAV_FileFetch.lua")
 
--- NOTE(Salads): Example JSON Structure for an interface file.
---[[
-
-    { -- Root JSON Object.
-
-          "Parameters" : [
-                            { -- Each Parameter is a JSON Object. Here is a description for each member.
-
-                                -- All types can use these members. These are required.
-                                name = "Parameter Name. ( Will be passed into shader exactly as specified here )",
-                                label = "Parameter label, for displaying to the client. (NOT the name of the parameter in-code)",
-                                default = "Default value of the parameter.",
-                                guiType = "Name of the user control to use for this parameter. ( 'slider', 'dropdown', 'checkbox', 'color' )",
-
-                                -- OPTIONAL, but if one is specified, all bitfield-related stuff must be for the respective parameter.
-                                bitfieldId = "If this is filled out, then this parameter will be set as a 0/1 in a bitfield specified by this variable.",
-                                bitfieldIndex = "The bit index that this parameter should set. 20 MAX. (Safe(er?) side of c++ floating point decimal unit capacity)",
-
-                                -- OPTIONAL common members.
-                                tooltip = "Text that shows up when user is hovering their mouse over the control.",
-                                tooltipIcon = "Path to a image to use with the tooltip.",
-
-                                -- REQUIRED 'slider' specific options
-                                minValue = "Minimum value the slider should allow.",
-                                maxValue = "Maximum value the slider should allow.",
-
-                                decimalPlaces = "Number of decimal units to include. Ex: 2 = 1.25, 3 = 1.253, etc..", -- OPTIONAL (slider), but 2 by default.
-
-                                -- REQUIRED 'dropdown' specific options
-                                choices = "A table that specifies the value a dropdown option represents, and the label for that option."
-
-                                -- 'checkbox' specific options
-                                -- No specific options!
-
-                                -- 'color' specific options
-                                -- No specific options!
-                            },
-                            -- And so on...
-                         ]
-      }
-
---]]
+Script.Load("lua/MAV_Globals.lua")
 
 local kAVFileTypes = set
 {
@@ -53,70 +12,6 @@ local kAVFileTypes = set
     "hlsl",
     "interface"
 }
-
-local function ProcessInterfaceFile(avTable)
-
-    if not avTable.interface then
-        Log("ERROR: interface file does not exist for AV: %s", avTable.id)
-        return false
-    end
-
-    -- Open the file and parse it.
-    local openedFile = io.open(avTable.interface, "r")
-    if openedFile then
-
-        local decodedInterface, _, errStr = json.decode(openedFile:read("*all"))
-        io.close(openedFile)
-
-        if errStr then
-            Log("Error while decoding json file " .. avTable.interface .. ": " .. errStr)
-            return false
-        end
-
-        -- TODO(Salads): Read and validate all of the decoded json here.
-        avTable.interfaceData = {}
-        if decodedInterface.Parameters then
-            for i = 1, #decodedInterface.Parameters do
-                table.insert(avTable.interfaceData, decodedInterface[i])
-            end
-        end
-        -- Its possible that a AV doesn't need any parameters.
-
-    else
-        Log("ERROR: Could not open interface file for AV: %s!", avTable.id)
-        return false
-    end
-
-    return false
-end
-
-local kAVFileTypes = set
-{
-    "screenfx",
-    "shader",
-    "hlsl",
-    "interface"
-}
-
--- These are identifiers that are forbidden due to that member name being used
--- for some other purpose.
-local kReservedIdentifiers = set
-{
-    "_skippedFiles" -- For debug information.
-}
-
-kValidStatus = enum(
-{
-    'Valid',
-    'MissingScreenFX',
-    'InvalidParameter'
-})
-
-kSkippedFileReason = enum(
-{
-    'UsedReservedId',
-    'NoIdentifier'
-})
 
 --[[
         Puts all the files from each MAV folder into their respective table,
@@ -156,7 +51,8 @@ function MAVCompileFiles(files)
                     {
                         id = fileAVIdentifier,
                         status = kValidStatus.Valid,
-                        parameterErrors = {},
+                        fileSetupErrors = {},
+                        interfaceErrors = {},
                         ignoredFiles = {},
                     }
                 end

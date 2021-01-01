@@ -1,10 +1,14 @@
 
 Print("$ Loaded MAV.lua")
 
+Script.Load("lua/MAV_Globals.lua")
+Script.Load("lua/MAV_Utility.lua")
 Script.Load("lua/MAV_FileFetch.lua")
 Script.Load("lua/MAV_Validation.lua")
 Script.Load("lua/MAV_MenuGeneration.lua")
 Script.Load("lua/menu2/NavBar/Screens/Options/GUIMenuOptions.lua")
+
+Print("$ Print GUITypes: ( %s )", GetSetString(kGuiTypes))
 
 local MAV
 function GetMAV()
@@ -37,4 +41,5 @@ function MAVRefreshAVSources()
 
     table.insert(gModsCategories, guiConfig)
 
+    Print("$ Finished Refresh of AV Sources")
 end

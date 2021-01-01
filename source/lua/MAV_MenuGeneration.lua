@@ -60,7 +60,7 @@ function MAVGenerateGUIConfigContents(avTable)
                 function(self) self:AlignTop() self:AlignRight() end,
             },
 
-        },
+        }
         --{
         --    name = "avPickerDropdown",
         --    class = OP_TT_Choice,

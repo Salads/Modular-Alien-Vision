@@ -50,9 +50,6 @@ function MAVCompileFiles(files)
                     resultTable[fileAVIdentifier] =
                     {
                         id = fileAVIdentifier,
-                        status = kValidStatus.Valid,
-                        fileSetupErrors = {},
-                        interfaceErrors = {},
                         ignoredFiles = {},
                     }
                 end

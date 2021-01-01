@@ -2,9 +2,10 @@
 Print("$ Loaded MAV_Validation.lua")
 
 Script.Load("lua/MAV_Globals.lua")
+Script.Load("lua/MAV_Utility.lua")
 
-function MAVCheckType(value, type)
-    return type(value) == type
+function MAVCheckType(value, requiredType)
+    return type(value) == requiredType
 end
 
 function MAVGetIsArray(test)
@@ -12,7 +13,7 @@ function MAVGetIsArray(test)
     if type(test) ~= "table" then return false end
 
     local numericalKeys = {}
-    for key, value in pairs(test) do
+    for key, _ in pairs(test) do
 
         -- Lua arrays should have a contiguous sequence of numerical keys starting from 1.
         if type(key) ~= "number" then return false end
@@ -66,15 +67,69 @@ end
 --
 --        -- 'checkbox' specific options
 --        -- No specific options!
---
---        -- 'color' specific options
---        -- No specific options!
 --    },
 ---- And so on...
 --]
 --}
 
 -- TODO(Salads): Validate the interface.
+
+local function ValidateInterfaceParameterSetting_String(parameterVar, parameterName, required, errorTable)
+
+    local isValid = true
+
+    if not MAVCheckType(parameterVar, "string") then
+
+        if required then
+            table.insert(errorTable, string.format("'%s' is required, and must be a string!", parameterName))
+            isValid = false
+        end
+
+    elseif parameterVar:len() <= 0 then
+        table.insert(errorTable, string.format("'%s' must be a string with more than 0 characters!", parameterName))
+        isValid = false
+    end
+
+    return isValid
+
+end
+
+local function ValidateInterfaceParameterSetting_StringSet(parameterVar, parameterName, required, errorTable, constraintSet)
+
+    assert(constraintSet)
+
+    local isValid = true
+
+    if not MAVCheckType(parameterVar, "string") then
+
+        if required then
+            table.insert(errorTable, string.format("'%s' is required, and must be a string matching one of these: ( %s )", parameterName, GetSetString(kGuiTypes)))
+            isValid = false
+        end
+
+    elseif not constraintSet[parameterVar] then
+        table.insert(errorTable, string.format("'%s' must be a string matching one of these: ( %s )", parameterName, GetSetString(kGuiTypes)))
+        isValid = false
+    end
+
+    return isValid
+
+end
+
+local function ValidateInterfaceParameterSetting_Number(parameterVar, parameterName, required, errorTable)
+
+    local isValid = true
+
+    if not MAVCheckType(parameterVar, "number") then
+        if required then
+            table.insert(errorTable, string.format("'%s' is required, and must be a number!", parameterName))
+            isValid = false
+        end
+    end
+
+    return isValid
+
+end
 
 function MAVValidateInterface(avTable)
 
@@ -129,31 +184,26 @@ function MAVValidateInterface(avTable)
     -- All thats left is to validate each parameter.
     local isValid = true
 
-    ---- Validate common required stuff.
-    --if not MAVCheckType(interfaceTable.name, "string") then
-    --    table.insert(avTable.parameterErrors, "'name' is required, and must be a string!")
-    --    isValid = false
-    --end
-    --
-    --if not MAVCheckType(interfaceTable.label, "string") then
-    --    table.insert(avTable.parameterErrors, "'label' is required, and must be a string!")
-    --    isValid = false
-    --end
-    --
-    --if not MAVCheckType(interfaceTable.default, "number") then
-    --    table.insert(avTable.parameterErrors, "'default' is required, and must be a number!")
-    --    isValid = false
-    --end
-    --
-    --if not MAVCheckType(interfaceTable.guiType, "string") then
-    --    table.insert(avTable.parameterErrors, "'guiType' is required, and must be a string!")
-    --    isValid = false
-    --elseif not kGuiTypes[interfaceTable.guiType] then
-    --    table.insert(avTable.parameterErrors, string.format("'guiType' %s is not a valid type!", interfaceTable.guiType))
-    --    isValid = false
-    --else
-    --
-    --end
+    local usedNames = {}
+    local usedBitfieldIndexes = {}
+
+    if not avTable.parameterErrors then
+        avTable.parameterErrors = {}
+    end
+
+    for pIndex = 1, #interface.Parameters do
+
+        local parameter = interface.Parameters[pIndex]
+
+        -- Validate common required stuff.
+        isValid = isValid and ValidateInterfaceParameterSetting_String(parameter.name, "name", true, avTable.parameterErrors)
+        isValid = isValid and ValidateInterfaceParameterSetting_String(parameter.label, "label", true, avTable.parameterErrors)
+        isValid = isValid and ValidateInterfaceParameterSetting_Number(parameter.default, "default", true, avTable.parameterErrors)
+        isValid = isValid and ValidateInterfaceParameterSetting_StringSet(parameter.guiType, "guiType", true, avTable.parameterErrors, kGuiTypes)
+
+    end
+
+    -- TODO(Salads): Check for bitfield conflicts between parameters.
 
     return isValid
 

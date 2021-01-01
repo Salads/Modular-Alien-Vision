@@ -1,4 +1,4 @@
-source      = "MAV/coolname/DarkVision.hlsl"
+source      = "MAV/TestAV/DarkVision.hlsl"
 techniques  =
     [
         {

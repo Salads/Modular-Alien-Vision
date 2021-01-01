@@ -10,7 +10,7 @@ layers =
     [
         {
             color_targets                   = "back_buffer"
-            shader                          = "MAV/coolname/DarkVision.shader"
+            shader                          = "MAV/TestAV/DarkVision.shader"
             technique                       = "SFXDarkVision"
             generator                       = "fullscreen"
             parameters                      = {

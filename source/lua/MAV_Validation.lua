@@ -74,19 +74,31 @@ end
 
 -- TODO(Salads): Validate the interface.
 
+local kInterfaceDefaults =
+{
+    decimalPlaces = 0
+}
+
+local kOptionalOrRequiredStr =
+{
+    [true] = "Required",
+    [false] = "Optional"
+}
+
+
 local function ValidateInterfaceParameterSetting_String(parameterVar, parameterName, required, errorTable)
 
     local isValid = true
 
     if not MAVCheckType(parameterVar, "string") then
 
-        if required then
-            table.insert(errorTable, string.format("'%s' is required, and must be a string!", parameterName))
+        if required or parameterVar ~= nil then
+            table.insert(errorTable, string.format("%s setting '%s' must be a string!", kOptionalOrRequiredStr[required], parameterName))
             isValid = false
         end
 
     elseif parameterVar:len() <= 0 then
-        table.insert(errorTable, string.format("'%s' must be a string with more than 0 characters!", parameterName))
+        table.insert(errorTable, string.format("%s setting '%s' must be a string with more than 0 characters!", kOptionalOrRequiredStr[required], parameterName))
         isValid = false
     end
 
@@ -100,15 +112,13 @@ local function ValidateInterfaceParameterSetting_StringSet(parameterVar, paramet
 
     local isValid = true
 
-    if not MAVCheckType(parameterVar, "string") then
+    if (not MAVCheckType(parameterVar, "string") and (required or parameterVar ~= nil)) or not constraintSet[parameterVar] then
+        table.insert(errorTable,
+                string.format("%s setting '%s' must be a string matching one of these: ( %s )",
+                        kOptionalOrRequiredStr[required],
+                        parameterName,
+                        GetSetString(kGuiTypes)))
 
-        if required then
-            table.insert(errorTable, string.format("'%s' is required, and must be a string matching one of these: ( %s )", parameterName, GetSetString(kGuiTypes)))
-            isValid = false
-        end
-
-    elseif not constraintSet[parameterVar] then
-        table.insert(errorTable, string.format("'%s' must be a string matching one of these: ( %s )", parameterName, GetSetString(kGuiTypes)))
         isValid = false
     end
 
@@ -121,8 +131,8 @@ local function ValidateInterfaceParameterSetting_Number(parameterVar, parameterN
     local isValid = true
 
     if not MAVCheckType(parameterVar, "number") then
-        if required then
-            table.insert(errorTable, string.format("'%s' is required, and must be a number!", parameterName))
+        if required or parameterVar ~= nil then
+            table.insert(errorTable, string.format("%s setting '%s' is required, and must be a number!", kOptionalOrRequiredStr[required], parameterName))
             isValid = false
         end
     end
@@ -130,6 +140,52 @@ local function ValidateInterfaceParameterSetting_Number(parameterVar, parameterN
     return isValid
 
 end
+
+local function ValidateInterfaceParameterGuiType_Slider(parameterTable, avTable)
+
+    -- REQUIRED 'slider' specific options
+    -- =======================================================
+    -- minValue = "Minimum value the slider should allow.",
+    -- maxValue = "Maximum value the slider should allow.",
+
+    -- OPTIONAL
+    -- =======================================================
+    -- decimalPlaces = "Number of decimal units to include. Ex: 2 = 1.25, 3 = 1.253, and so on.."
+
+    local isValid = true
+
+    -- Validate required options.
+    isValid = isValid and ValidateInterfaceParameterSetting_Number(parameterTable.minValue, "minValue", true, avTable.parameterErrors)
+    isValid = isValid and ValidateInterfaceParameterSetting_Number(parameterTable.maxValue, "maxValue", true, avTable.parameterErrors)
+
+    -- Make sure that minValue is less than maxValue
+    if isValid then
+        if (parameterTable.minValue < parameterTable.maxValue) then
+            table.insert(avTable.parameterErrors, string.format("minValue must be less than maxValue for 'slider' guiType!"))
+            isValid = false
+        end
+    end
+
+    isValid = isValid and ValidateInterfaceParameterSetting_Number(parameterTable.decimalPlaces or kInterfaceDefaults["decimalPlaces"], "decimalPlaces", false, avTable.parameterErrors)
+
+    return isValid
+
+end
+
+local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, avTable)
+
+end
+
+local function ValidateInterfaceParameterGuiType_Checkbox(parameterTable, avTable)
+
+end
+
+local kGuiTypeValidators =
+{
+    ["slider"] = ValidateInterfaceParameterGuiType_Slider,
+    ["dropdown"] = ValidateInterfaceParameterGuiType_Dropdown,
+    ["checkbox"] = ValidateInterfaceParameterGuiType_Checkbox,
+}
 
 function MAVValidateInterface(avTable)
 
@@ -200,6 +256,11 @@ function MAVValidateInterface(avTable)
         isValid = isValid and ValidateInterfaceParameterSetting_String(parameter.label, "label", true, avTable.parameterErrors)
         isValid = isValid and ValidateInterfaceParameterSetting_Number(parameter.default, "default", true, avTable.parameterErrors)
         isValid = isValid and ValidateInterfaceParameterSetting_StringSet(parameter.guiType, "guiType", true, avTable.parameterErrors, kGuiTypes)
+
+        -- Validate GUIType specific options.
+        if isValid then
+            isValid = isValid and kGuiTypeValidators[parameter.guiType](parameter, avTable.parameterErrors)
+        end
 
     end
 

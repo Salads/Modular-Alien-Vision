@@ -177,7 +177,8 @@ local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, avTabl
 end
 
 local function ValidateInterfaceParameterGuiType_Checkbox(parameterTable, avTable)
-
+    -- There are no specific interface settings for the checkbox!
+    return true
 end
 
 local kGuiTypeValidators =

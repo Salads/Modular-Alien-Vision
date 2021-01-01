@@ -4,38 +4,6 @@ Print("$ Loaded MAV_Validation.lua")
 Script.Load("lua/MAV_Globals.lua")
 Script.Load("lua/MAV_Utility.lua")
 
-function MAVCheckType(value, requiredType)
-    return type(value) == requiredType
-end
-
-function MAVGetIsArray(test)
-
-    if type(test) ~= "table" then return false end
-
-    local numericalKeys = {}
-    for key, _ in pairs(test) do
-
-        -- Lua arrays should have a contiguous sequence of numerical keys starting from 1.
-        if type(key) ~= "number" then return false end
-
-        -- Lua arrays shouldn't have identical keys.
-        if table.contains(numericalKeys) then return false end
-
-        table.insert(numericalKeys, key)
-
-    end
-
-    table.sort(numericalKeys)
-
-    for i = 1, #numericalKeys do
-        if i ~= numericalKeys[i] then
-            return false
-        end
-    end
-
-    return true
-end
-
 -- NOTE(Salads): Example JSON Structure for an interface file.
 --{ -- Root JSON Object.
 --
@@ -173,6 +141,133 @@ local function ValidateInterfaceParameterGuiType_Slider(parameterTable, avTable)
 end
 
 local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, avTable)
+
+    -- REQUIRED 'dropdown' specific options
+    -- ===============================================
+    -- choices = "A table that specifies the value a dropdown option represents, and the label for that option."
+
+    -- ...yep, that's the only one! (although we need to check between the values and such, heh
+
+    local isValid = true
+
+    -- Validate the basic structure of the table.
+    if not MAVCheckType(parameterTable.choices, "table") then
+        table.insert(avTable.parameterErrors, string.format("%s setting '%s' needs to be a array of objects! (Not a table)", kOptionalOrRequiredStr[true], "choices"))
+        isValid = false
+    end
+
+    if isValid and not MAVGetIsArray(parameterTable.choices) then
+        table.insert(avTable.parameterErrors, string.format("%s setting '%s' needs to be a array of objects! (Not a array)", kOptionalOrRequiredStr[true], "choices"))
+        isValid = false
+    end
+
+    -- Make sure each choices table member is also a table.
+    if isValid then
+
+        local invalidChoices_NotTableIndexes = {}
+        local invalidChoices_MissingValueIndexes = {}
+        local invalidChoices_MissingDisplayStringIndexes = {}
+        local invalidChoices_BadValueTypeIndexes = {}
+        local invalidChoices_BadDisplayStringTypeIndexes = {}
+
+        local invalidChoices_ValueToChoiceIndexes = {}
+
+        for i = 1, #parameterTable.choices do
+
+            local choiceValid = true
+
+            local choiceTable = parameterTable.choices[i]
+            if not MAVCheckType(choiceTable, "table") then
+                invalidChoices_NotTableIndexes:insert(i)
+                choiceValid = false
+            end
+
+            -- Make sure all the choices have the required members filled out.
+            if choiceValid then
+
+                if not choiceTable.value then
+                    invalidChoices_MissingValueIndexes:insert(i)
+                    choiceValid = false
+                end
+
+                if not choiceTable.displayString then
+                    invalidChoices_MissingDisplayStringIndexes:insert(i)
+                    choiceValid = false
+                end
+
+            end
+
+            -- Make sure that value and displayString are the correct types.
+            if choiceValid then
+
+                if type(choiceTable.value) ~= "number" then
+                    invalidChoices_BadValueTypeIndexes:insert(i)
+                    choiceValid = false
+                end
+
+                if type(choiceTable.displayString) ~= "string" then
+                    invalidChoices_BadDisplayStringTypeIndexes:insert(i)
+                    choiceValid = false
+                end
+
+            end
+
+            -- Record all the values (we've guaranteed that it's a number at this point)
+            -- so we can check if there are any copies.
+            if choiceValid then
+                if not invalidChoices_ValueToChoiceIndexes[choiceTable.value] then
+                    invalidChoices_ValueToChoiceIndexes[choiceTable.value] = {}
+                end
+
+                invalidChoices_ValueToChoiceIndexes[choiceTable.value]:insert(i)
+
+                if #invalidChoices_ValueToChoiceIndexes[choiceTable.value] > 1 then
+                    choiceValid = false
+                end
+            end
+
+            if not choiceValid then
+                isValid = false
+            end
+
+        end
+
+        -- Now that we've recorded all the info required for error checking,
+        -- add any error messages to our parameter errors table.
+
+        if #invalidChoices_NotTableIndexes > 0 then
+            avTable.parameterErrors:insert(string.format("The choices at these indexes are not tables! ( %s )", invalidChoices_NotTableIndexes:to_string()))
+        end
+
+        if #invalidChoices_MissingValueIndexes > 0 then
+            avTable.parameterErrors:insert(string.format("The choices at these indexes do not have a 'value' member! ( %s )", invalidChoices_MissingValueIndexes:to_string()))
+        end
+
+        if #invalidChoices_MissingDisplayStringIndexes > 0 then
+            avTable.parameterErrors:insert(string.format("The choices at these indexes do not have a 'displayString' member! ( %s )", invalidChoices_MissingDisplayStringIndexes:to_string()))
+        end
+
+        if #invalidChoices_BadValueTypeIndexes > 0 then
+            avTable.parameterErrors:insert(string.format("The choices at these indexes have 'value' members that are not numbers! ( %s )", invalidChoices_BadValueTypeIndexes:to_string()))
+        end
+
+        if #invalidChoices_BadDisplayStringTypeIndexes > 0 then
+            avTable.parameterErrors:insert(string.format("The choices at these indexes have 'displayString' members that are not strings! ( %s )", invalidChoices_BadDisplayStringTypeIndexes:to_string()))
+        end
+
+        -- Add errors for re-used value members in the same parameter.
+        for _, valueChoiceIndexTable in pairs(invalidChoices_ValueToChoiceIndexes) do
+
+            if #valueChoiceIndexTable > 1 then
+                avTable.parameterErrors:insert(string.format("The choices at these indexes have 'value' members that are using the same value! ( %s )",
+                        valueChoiceIndexTable:to_string()))
+            end
+
+        end
+
+    end
+
+    return isValid
 
 end
 

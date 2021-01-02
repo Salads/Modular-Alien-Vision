@@ -129,7 +129,7 @@ local function ValidateInterfaceParameterSetting_Number(parameterVar, parameterN
 
 end
 
-local function ValidateInterfaceParameterGuiType_Slider(parameterTable, avTable)
+local function ValidateInterfaceParameterGuiType_Slider(parameterTable, errorTable)
 
     -- REQUIRED 'slider' specific options
     -- =======================================================
@@ -143,24 +143,24 @@ local function ValidateInterfaceParameterGuiType_Slider(parameterTable, avTable)
     local isValid = true
 
     -- Validate required options.
-    isValid = isValid and ValidateInterfaceParameterSetting_Number(parameterTable.minValue, "minValue", true, avTable.parameterErrors)
-    isValid = isValid and ValidateInterfaceParameterSetting_Number(parameterTable.maxValue, "maxValue", true, avTable.parameterErrors)
+    isValid = isValid and ValidateInterfaceParameterSetting_Number(parameterTable.minValue, "minValue", true, errorTable )
+    isValid = isValid and ValidateInterfaceParameterSetting_Number(parameterTable.maxValue, "maxValue", true, errorTable )
 
     -- Make sure that minValue is less than maxValue
     if isValid then
         if (parameterTable.minValue < parameterTable.maxValue) then
-            table.insert(avTable.parameterErrors, string.format("minValue must be less than maxValue for 'slider' guiType!"))
+            table.insert(errorTable, string.format("minValue must be less than maxValue for 'slider' guiType!"))
             isValid = false
         end
     end
 
-    isValid = isValid and ValidateInterfaceParameterSetting_Number(parameterTable.decimalPlaces or kInterfaceDefaults["decimalPlaces"], "decimalPlaces", false, avTable.parameterErrors)
+    isValid = isValid and ValidateInterfaceParameterSetting_Number(parameterTable.decimalPlaces or kInterfaceDefaults["decimalPlaces"], "decimalPlaces", false, errorTable)
 
     return isValid
 
 end
 
-local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, avTable)
+local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, errorTable)
 
     -- REQUIRED 'dropdown' specific options
     -- ===============================================
@@ -172,12 +172,12 @@ local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, avTabl
 
     -- Validate the basic structure of the table.
     if not MAVCheckType(parameterTable.choices, "table") then
-        table.insert(avTable.parameterErrors, string.format("%s setting '%s' needs to be a array of objects! (Not a table)", kOptionalOrRequiredStr[true], "choices"))
+        table.insert(errorTable, string.format("%s setting '%s' needs to be a array of objects! (Not a table)", kOptionalOrRequiredStr[true], "choices"))
         isValid = false
     end
 
     if isValid and not MAVGetIsArray(parameterTable.choices) then
-        table.insert(avTable.parameterErrors, string.format("%s setting '%s' needs to be a array of objects! (Not a array)", kOptionalOrRequiredStr[true], "choices"))
+        table.insert(errorTable, string.format("%s setting '%s' needs to be a array of objects! (Not a array)", kOptionalOrRequiredStr[true], "choices"))
         isValid = false
     end
 
@@ -256,30 +256,30 @@ local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, avTabl
         -- add any error messages to our parameter errors table.
 
         if #invalidChoices_NotTableIndexes > 0 then
-            avTable.parameterErrors:insert(string.format("The choices at these indexes are not tables! ( %s )", invalidChoices_NotTableIndexes:to_string()))
+            errorTable:insert(string.format("The choices at these indexes are not tables! ( %s )", invalidChoices_NotTableIndexes:to_string()))
         end
 
         if #invalidChoices_MissingValueIndexes > 0 then
-            avTable.parameterErrors:insert(string.format("The choices at these indexes do not have a 'value' member! ( %s )", invalidChoices_MissingValueIndexes:to_string()))
+            errorTable:insert(string.format("The choices at these indexes do not have a 'value' member! ( %s )", invalidChoices_MissingValueIndexes:to_string()))
         end
 
         if #invalidChoices_MissingDisplayStringIndexes > 0 then
-            avTable.parameterErrors:insert(string.format("The choices at these indexes do not have a 'displayString' member! ( %s )", invalidChoices_MissingDisplayStringIndexes:to_string()))
+            errorTable:insert(string.format("The choices at these indexes do not have a 'displayString' member! ( %s )", invalidChoices_MissingDisplayStringIndexes:to_string()))
         end
 
         if #invalidChoices_BadValueTypeIndexes > 0 then
-            avTable.parameterErrors:insert(string.format("The choices at these indexes have 'value' members that are not numbers! ( %s )", invalidChoices_BadValueTypeIndexes:to_string()))
+            errorTable:insert(string.format("The choices at these indexes have 'value' members that are not numbers! ( %s )", invalidChoices_BadValueTypeIndexes:to_string()))
         end
 
         if #invalidChoices_BadDisplayStringTypeIndexes > 0 then
-            avTable.parameterErrors:insert(string.format("The choices at these indexes have 'displayString' members that are not strings! ( %s )", invalidChoices_BadDisplayStringTypeIndexes:to_string()))
+            errorTable:insert(string.format("The choices at these indexes have 'displayString' members that are not strings! ( %s )", invalidChoices_BadDisplayStringTypeIndexes:to_string()))
         end
 
         -- Add errors for re-used value members in the same parameter.
         for _, valueChoiceIndexTable in pairs(invalidChoices_ValueToChoiceIndexes) do
 
             if #valueChoiceIndexTable > 1 then
-                avTable.parameterErrors:insert(string.format("The choices at these indexes have 'value' members that are using the same value! ( %s )",
+                errorTable:insert(string.format("The choices at these indexes have 'value' members that are using the same value! ( %s )",
                         valueChoiceIndexTable:to_string()))
             end
 
@@ -291,7 +291,7 @@ local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, avTabl
 
 end
 
-local function ValidateInterfaceParameterGuiType_Checkbox(parameterTable, avTable)
+local function ValidateInterfaceParameterGuiType_Checkbox(parameterTable, errorTable)
     -- There are no specific interface settings for the checkbox!
     return true
 end
@@ -359,18 +359,22 @@ function MAVValidateInterface(avTable)
     local parameterNamesToParameterIndexes = {}
     local bitfieldConflictTable = {}
 
-    if not avTable.parameterErrors then
-        avTable.parameterErrors = {}
+    if not avTable.parametersErrors then
+        avTable.parametersErrors = {}
     end
 
     for pIndex = 1, #interface.Parameters do
 
+        avTable.parametersErrors[pIndex] = {}
+        local parameterErrorTable = avTable.parametersErrors[pIndex]
+
         local parameter = interface.Parameters[pIndex]
 
         -- Validate common required stuff.
-        isValid = isValid and ValidateInterfaceParameterSetting_String(parameter.name, "name", true, avTable.parameterErrors)
+        local nameValid = ValidateInterfaceParameterSetting_String(parameter.name, "name", true, parameterErrorTable)
+        isValid = isValid and nameValid
 
-        if isValid then
+        if nameValid then
 
             if not parameterNamesToParameterIndexes[parameter.name] then
                 parameterNamesToParameterIndexes[parameter.name] = {}
@@ -380,13 +384,18 @@ function MAVValidateInterface(avTable)
 
         end
 
-        isValid = isValid and ValidateInterfaceParameterSetting_String(parameter.label, "label", true, avTable.parameterErrors)
-        isValid = isValid and ValidateInterfaceParameterSetting_Number(parameter.default, "default", true, avTable.parameterErrors)
-        isValid = isValid and ValidateInterfaceParameterSetting_StringSet(parameter.guiType, "guiType", true, avTable.parameterErrors, kGuiTypes)
+        local labelValid   = ValidateInterfaceParameterSetting_String(parameter.label, "label", true, parameterErrorTable)
+        isValid = isValid and labelValid
+
+        local defaultValid = ValidateInterfaceParameterSetting_Number(parameter.default, "default", true, parameterErrorTable)
+        isValid = isValid and defaultValid
+
+        local guiTypeValid = ValidateInterfaceParameterSetting_StringSet(parameter.guiType, "guiType", true, parameterErrorTable, kGuiTypes)
+        isValid = isValid and guiTypeValid
 
         -- Validate GUIType specific options.
-        if isValid then
-            isValid = isValid and kGuiTypeValidators[parameter.guiType](parameter, avTable.parameterErrors)
+        if (labelValid and defaultValid and guiTypeValid) then
+            isValid = isValid and kGuiTypeValidators[parameter.guiType](parameter, parameterErrorTable)
         end
 
         -- Validate optional bitfield fields. These have a special relationship, so we can't use the regular generic setting checker.
@@ -453,9 +462,13 @@ function MAVValidateInterface(avTable)
 
         end
 
-        isValid = isValid and ValidateInterfaceParameterSetting_String(parameter.tooltip, "tooltip", false, avTable.parameterErrors)
-        isValid = isValid and ValidateInterfaceParameterSetting_StringPath(parameter.tooltipIcon, "tooltipIcon", false, avTable.parameterErrors)
+        isValid = isValid and ValidateInterfaceParameterSetting_String(parameter.tooltip, "tooltip", false, parameterErrorTable)
+        isValid = isValid and ValidateInterfaceParameterSetting_StringPath(parameter.tooltipIcon, "tooltipIcon", false, parameterErrorTable)
     end
+
+    -- Make sure all the parameters for this AV do not have conflicting names.
+    -- Otherwise, multiple parameters would set the same parameter.
+
 
     -- TODO(Salads): Check for bitfield conflicts between parameters.
 

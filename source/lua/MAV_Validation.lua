@@ -40,7 +40,7 @@ Script.Load("lua/MAV_Utility.lua")
 --]
 --}
 
--- TODO(Salads): Validate the interface.
+local kMAXBitsPerBitfield = 20 -- Could be up to, say, 22 but i'm just cutting it safe.
 
 local kInterfaceDefaults =
 {
@@ -336,8 +336,8 @@ function MAVValidateInterface(avTable)
     -- All thats left is to validate each parameter.
     local isValid = true
 
-    local usedNames = {}
-    local usedBitfieldIndexes = {}
+    local parameterNamesToParameterIndexes = {}
+    local bitfieldConflictTable = {}
 
     if not avTable.parameterErrors then
         avTable.parameterErrors = {}
@@ -349,6 +349,17 @@ function MAVValidateInterface(avTable)
 
         -- Validate common required stuff.
         isValid = isValid and ValidateInterfaceParameterSetting_String(parameter.name, "name", true, avTable.parameterErrors)
+
+        if isValid then
+
+            if not parameterNamesToParameterIndexes[parameter.name] then
+                parameterNamesToParameterIndexes[parameter.name] = {}
+            end
+
+            parameterNamesToParameterIndexes[parameter.name]:insert(pIndex)
+
+        end
+
         isValid = isValid and ValidateInterfaceParameterSetting_String(parameter.label, "label", true, avTable.parameterErrors)
         isValid = isValid and ValidateInterfaceParameterSetting_Number(parameter.default, "default", true, avTable.parameterErrors)
         isValid = isValid and ValidateInterfaceParameterSetting_StringSet(parameter.guiType, "guiType", true, avTable.parameterErrors, kGuiTypes)
@@ -357,6 +368,72 @@ function MAVValidateInterface(avTable)
         if isValid then
             isValid = isValid and kGuiTypeValidators[parameter.guiType](parameter, avTable.parameterErrors)
         end
+
+        -- Validate optional bitfield fields. These have a special relationship, so we can't use the regular generic setting checker.
+        -- If one of the bitfield settings are set, then the other must be, or else the whole thing is poopydoodoo.
+        local bitfieldIdExists = parameter.bitfieldId ~= nil
+        local bitfieldIndexExists = parameter.bitfieldIndex ~= nil
+
+        if (bitfieldIdExists or bitfieldIndexExists) then
+
+            if bitfieldIdExists ~= bitfieldIndexExists then -- poopydoodoo!
+
+                local firstStr = bitfieldIdExists and "bitfieldId" or "bitfieldIndex"
+                local secondStr = bitfieldIndexExists and "bitfieldIndex" or "bitfieldId"
+                avTable.parameterErrors:insert(string.format("Parameter bitfield setting '%s' is defined, but '%s' isn't!", firstStr, secondStr))
+                isValid = false
+
+            else -- Validate both settings, since they both exist.
+
+                local bitfieldsValid = true
+
+                if not MAVCheckType(parameter.bitfieldId, "string") then
+
+                    table.insert(avTable.parameterErrors, string.format("bitfieldId must be a string!"))
+                    bitfieldsValid = false
+
+                elseif parameter.bitfieldId:len() <= 0 then
+
+                    table.insert(avTable.parameterErrors, string.format("bitfieldId must be a string with more than 0 characters!"))
+                    bitfieldsValid = false
+
+                end
+
+                if not MAVCheckType(parameter.bitfieldIndex, "number") then
+
+                    table.insert(avTable.parameterErrors, string.format("bitfieldId must be a number!"))
+                    bitfieldsValid = false
+
+                elseif not (parameter.bitfieldIndex >= 0 and parameter.bitfieldIndex <= kMAXBitsPerBitfield) then
+
+                    table.insert(avTable.parameterErrors, string.format("bitfieldIndex must be a number between 0 and %d (inclusive)!", kMAXBitsPerBitfield))
+                    bitfieldsValid = false
+
+                end
+
+                -- If both fields are valid, add them to our conflict tracker table, so that
+                -- we can check if different parameters are using the same bitfield index.
+                if bitfieldsValid then
+
+                    if not bitfieldConflictTable[parameter.bitfieldId] then
+                        bitfieldConflictTable[parameter.bitfieldId] = {}
+                    end
+
+                    if not bitfieldConflictTable[parameter.bitfieldId][parameter.bitfieldIndex] then
+                        bitfieldConflictTable[parameter.bitfieldId][parameter.bitfieldIndex] = {}
+                    end
+
+                    bitfieldConflictTable[parameter.bitfieldId][parameter.bitfieldIndex]:insert(pIndex)
+
+                end
+
+                isValid = isValid and bitfieldsValid
+
+            end
+
+        end
+
+        -- TODO(Salads): Validation for tooltip text and tooltip icon path.
 
     end
 

@@ -198,7 +198,7 @@ local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, errorT
 
             local choiceTable = parameterTable.choices[i]
             if not MAVCheckType(choiceTable, "table") then
-                invalidChoices_NotTableIndexes:insert(i)
+                table.insert(invalidChoices_NotTableIndexes, i)
                 choiceValid = false
             end
 
@@ -206,12 +206,12 @@ local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, errorT
             if choiceValid then
 
                 if not choiceTable.value then
-                    invalidChoices_MissingValueIndexes:insert(i)
+                    table.insert(invalidChoices_MissingValueIndexes, i)
                     choiceValid = false
                 end
 
                 if not choiceTable.displayString then
-                    invalidChoices_MissingDisplayStringIndexes:insert(i)
+                    table.insert(invalidChoices_MissingDisplayStringIndexes, i)
                     choiceValid = false
                 end
 
@@ -221,12 +221,12 @@ local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, errorT
             if choiceValid then
 
                 if type(choiceTable.value) ~= "number" then
-                    invalidChoices_BadValueTypeIndexes:insert(i)
+                    table.insert(invalidChoices_BadValueTypeIndexes, i)
                     choiceValid = false
                 end
 
                 if type(choiceTable.displayString) ~= "string" then
-                    invalidChoices_BadDisplayStringTypeIndexes:insert(i)
+                    table.insert(invalidChoices_BadDisplayStringTypeIndexes, i)
                     choiceValid = false
                 end
 
@@ -239,7 +239,7 @@ local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, errorT
                     invalidChoices_ValueToChoiceIndexes[choiceTable.value] = {}
                 end
 
-                invalidChoices_ValueToChoiceIndexes[choiceTable.value]:insert(i)
+                table.insert(invalidChoices_ValueToChoiceIndexes[choiceTable.value], i)
 
                 if #invalidChoices_ValueToChoiceIndexes[choiceTable.value] > 1 then
                     choiceValid = false
@@ -256,31 +256,31 @@ local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, errorT
         -- add any error messages to our parameter errors table.
 
         if #invalidChoices_NotTableIndexes > 0 then
-            errorTable:insert(string.format("The choices at these indexes are not tables! ( %s )", invalidChoices_NotTableIndexes:to_string()))
+            table.insert(errorTable, string.format("The choices at these indexes are not tables! ( %s )", GetTableValuesString(invalidChoices_NotTableIndexes)))
         end
 
         if #invalidChoices_MissingValueIndexes > 0 then
-            errorTable:insert(string.format("The choices at these indexes do not have a 'value' member! ( %s )", invalidChoices_MissingValueIndexes:to_string()))
+            table.insert(errorTable, string.format("The choices at these indexes do not have a 'value' member! ( %s )", GetTableValuesString(invalidChoices_MissingValueIndexes)))
         end
 
         if #invalidChoices_MissingDisplayStringIndexes > 0 then
-            errorTable:insert(string.format("The choices at these indexes do not have a 'displayString' member! ( %s )", invalidChoices_MissingDisplayStringIndexes:to_string()))
+            table.insert(errorTable, string.format("The choices at these indexes do not have a 'displayString' member! ( %s )", GetTableValuesString(invalidChoices_MissingDisplayStringIndexes)))
         end
 
         if #invalidChoices_BadValueTypeIndexes > 0 then
-            errorTable:insert(string.format("The choices at these indexes have 'value' members that are not numbers! ( %s )", invalidChoices_BadValueTypeIndexes:to_string()))
+            table.insert(errorTable, string.format("The choices at these indexes have 'value' members that are not numbers! ( %s )", GetTableValuesString(invalidChoices_BadValueTypeIndexes)))
         end
 
         if #invalidChoices_BadDisplayStringTypeIndexes > 0 then
-            errorTable:insert(string.format("The choices at these indexes have 'displayString' members that are not strings! ( %s )", invalidChoices_BadDisplayStringTypeIndexes:to_string()))
+            table.insert(errorTable, string.format("The choices at these indexes have 'displayString' members that are not strings! ( %s )", GetTableValuesString(invalidChoices_BadDisplayStringTypeIndexes)))
         end
 
         -- Add errors for re-used value members in the same parameter.
         for _, valueChoiceIndexTable in pairs(invalidChoices_ValueToChoiceIndexes) do
 
             if #valueChoiceIndexTable > 1 then
-                errorTable:insert(string.format("The choices at these indexes have 'value' members that are using the same value! ( %s )",
-                        valueChoiceIndexTable:to_string()))
+                table.insert(errorTable, string.format("The choices at these indexes have 'value' members that are using the same value! ( %s )",
+                        GetTableValuesString(valueChoiceIndexTable)))
             end
 
         end
@@ -368,7 +368,7 @@ function MAVValidateInterface(avTable)
 
     for pIndex = 1, #interface.Parameters do
 
-        avTable.parametersErrors:insert({})
+        table.insert(avTable.parametersErrors, {})
         local parameterErrorTable = avTable.parametersErrors[pIndex]
 
         local parameter = interface.Parameters[pIndex]
@@ -383,7 +383,7 @@ function MAVValidateInterface(avTable)
                 parameterNamesToParameterIndexes[parameter.name] = {}
             end
 
-            parameterNamesToParameterIndexes[parameter.name]:insert(pIndex)
+            table.insert(parameterNamesToParameterIndexes[parameter.name], pIndex)
 
         end
 
@@ -412,7 +412,7 @@ function MAVValidateInterface(avTable)
 
                 local firstStr = bitfieldIdExists and "bitfieldId" or "bitfieldIndex"
                 local secondStr = bitfieldIndexExists and "bitfieldIndex" or "bitfieldId"
-                avTable.parameterErrors:insert(string.format("Parameter bitfield setting '%s' is defined, but '%s' isn't!", firstStr, secondStr))
+                table.insert(avTable.parameterErrors, string.format("Parameter bitfield setting '%s' is defined, but '%s' isn't!", firstStr, secondStr))
                 isValid = false
 
             else -- Validate both settings, since they both exist.
@@ -455,7 +455,7 @@ function MAVValidateInterface(avTable)
                         bitfieldConflictTable[parameter.bitfieldId][parameter.bitfieldIndex] = {}
                     end
 
-                    bitfieldConflictTable[parameter.bitfieldId][parameter.bitfieldIndex]:insert(pIndex)
+                    table.insert(bitfieldConflictTable[parameter.bitfieldId][parameter.bitfieldIndex], pIndex)
 
                 end
 
@@ -473,14 +473,28 @@ function MAVValidateInterface(avTable)
     -- Otherwise, multiple parameters would set the same parameter.
     for pName, pIndexTable in pairs(parameterNamesToParameterIndexes) do
         if #pIndexTable > 1 then
-            avTable.parametersErrors.conflicts:insert(string.format("Parameters at these indexes are using the same 'name' value [%s]: ( %s )",
+            table.insert(avTable.parametersErrors.conflicts,
+                    string.format("Parameters at these indexes are using the same 'name' value [%s]: ( %s )",
                     pName,
-                    parameterNamesToParameterIndexes:to_string()))
+                    GetTableValuesString(parameterNamesToParameterIndexes)))
             isValid = false
         end
     end
 
-    -- TODO(Salads): Check for bitfield conflicts between parameters.
+    -- Make sure the bitfields parameters of the current AV
+    -- do not have multiple parameters using the same bit in the same bitfield.
+    for bitfieldId, bitfieldUsedIndexesTable in pairs(bitfieldConflictTable) do
+        for bitfieldIndex, usersTable in pairs(bitfieldUsedIndexesTable) do
+            if #usersTable > 1 then
+                table.insert(avTable.parametersErrors.conflicts,
+                        string.format("Parameters at these indexes are using the same 'bitfieldId' (%s) and 'bitfieldIndex' (%s)! ( %s )",
+                        bitfieldId,
+                        bitfieldIndex,
+                        GetTableValuesString(usersTable)))
+                isValid = false
+            end
+        end
+    end
 
     return isValid
 

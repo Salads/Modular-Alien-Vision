@@ -8,7 +8,18 @@ Script.Load("lua/MAV_Validation.lua")
 Script.Load("lua/MAV_MenuGeneration.lua")
 Script.Load("lua/menu2/NavBar/Screens/Options/GUIMenuOptions.lua")
 
+
+--- TEMP(Salads): Just a test of some utility functions.
+local a =
+{
+    "hi",
+    "yes",
+    "hello"
+}
+
+Print("$ Print table values: ( %s )", GetTableValuesString(a))
 Print("$ Print GUITypes: ( %s )", GetSetString(kGuiTypes))
+
 
 local MAV
 function GetMAV()

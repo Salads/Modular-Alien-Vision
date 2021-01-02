@@ -47,7 +47,7 @@ function MAVGetIsArray(test)
     return true
 end
 
-function table.to_string(t)
+function GetTableValuesString(t)
 
     assert( type( t ) == "table" )
 
@@ -65,5 +65,7 @@ function table.to_string(t)
             first = false
         end
     end
+
+    return result
 
 end

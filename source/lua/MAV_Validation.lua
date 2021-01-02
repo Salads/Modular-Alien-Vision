@@ -360,12 +360,15 @@ function MAVValidateInterface(avTable)
     local bitfieldConflictTable = {}
 
     if not avTable.parametersErrors then
-        avTable.parametersErrors = {}
+        avTable.parametersErrors =
+        {
+            conflicts = {}
+        }
     end
 
     for pIndex = 1, #interface.Parameters do
 
-        avTable.parametersErrors[pIndex] = {}
+        avTable.parametersErrors:insert({})
         local parameterErrorTable = avTable.parametersErrors[pIndex]
 
         local parameter = interface.Parameters[pIndex]
@@ -468,7 +471,14 @@ function MAVValidateInterface(avTable)
 
     -- Make sure all the parameters for this AV do not have conflicting names.
     -- Otherwise, multiple parameters would set the same parameter.
-
+    for pName, pIndexTable in pairs(parameterNamesToParameterIndexes) do
+        if #pIndexTable > 1 then
+            avTable.parametersErrors.conflicts:insert(string.format("Parameters at these indexes are using the same 'name' value [%s]: ( %s )",
+                    pName,
+                    parameterNamesToParameterIndexes:to_string()))
+            isValid = false
+        end
+    end
 
     -- TODO(Salads): Check for bitfield conflicts between parameters.
 

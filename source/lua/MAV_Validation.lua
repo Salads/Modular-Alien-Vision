@@ -74,6 +74,26 @@ local function ValidateInterfaceParameterSetting_String(parameterVar, parameterN
 
 end
 
+local function ValidateInterfaceParameterSetting_StringPath(parameterVar, parameterName, required, errorTable)
+
+    local isValid = true
+
+    if not MAVCheckType(parameterVar, "string") then
+
+        if required or parameterVar ~= nil then
+            table.insert(errorTable, string.format("%s setting '%s' must be a string file path!", kOptionalOrRequiredStr[required], parameterName))
+            isValid = false
+        end
+
+    elseif not GetFileExists(parameterVar) then
+        table.insert(errorTable, string.format("%s setting '%s' points to a non-existent file! '%s'", kOptionalOrRequiredStr[required], parameterName, parameterVar))
+        isValid = false
+    end
+
+    return isValid
+
+end
+
 local function ValidateInterfaceParameterSetting_StringSet(parameterVar, parameterName, required, errorTable, constraintSet)
 
     assert(constraintSet)
@@ -433,8 +453,8 @@ function MAVValidateInterface(avTable)
 
         end
 
-        -- TODO(Salads): Validation for tooltip text and tooltip icon path.
-
+        isValid = isValid and ValidateInterfaceParameterSetting_String(parameter.tooltip, "tooltip", false, avTable.parameterErrors)
+        isValid = isValid and ValidateInterfaceParameterSetting_StringPath(parameter.tooltipIcon, "tooltipIcon", false, avTable.parameterErrors)
     end
 
     -- TODO(Salads): Check for bitfield conflicts between parameters.

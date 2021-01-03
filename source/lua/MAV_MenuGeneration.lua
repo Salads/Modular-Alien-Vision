@@ -43,6 +43,21 @@ local function SyncWidthToParentContentsWidthWithPadding(self)
     self:HookEvent(parentObj, "OnContentsSizeChanged", SyncWidthWithPadding)
 end
 
+local function GetAVChoices(avTable)
+
+    local choicesTable = {}
+
+    -- default option.
+    table.insert(choicesTable, { value = "default", displayString = "Default" })
+
+    for i = 1, #avTable do
+        table.insert(choicesTable, { value = avTable[i].id, displayString = avTable[i].id })
+    end
+
+    return choicesTable
+
+end
+
 function MAVGenerateGUIConfigContents(avTable)
 
     return
@@ -60,44 +75,27 @@ function MAVGenerateGUIConfigContents(avTable)
                 function(self) self:AlignTop() self:AlignRight() end,
             },
 
+        },
+        {
+            name = "mav_avPickDropdown",
+            class = OP_TT_Choice,
+            params =
+            {
+                optionPath = "MAV/avChoice",
+                optionType = "string",
+                default = "default",
+                immediateUpdate = function(self)
+                end,
+
+                tooltip = "Choose your Alien Vision",
+            },
+
+            properties =
+            {
+                {"Label", "Alien Vision: "},
+                {"Choices", GetAVChoices(avTable) },
+            },
         }
-        --{
-        --    name = "avPickerDropdown",
-        --    class = OP_TT_Choice,
-        --    params =
-        --    {
-        --        optionPath = "MAV/chosenAV",
-        --        optionType = "string",
-        --        default = "default",
-        --        immediateUpdate = function(self)
-        --            local oldValue = Client.GetOptionInteger("graphics/display/quality", 1)
-        --            local value = self:GetValue()
-        --            Client.SetOptionInteger("graphics/display/quality", value)
-        --            Client.ReloadGraphicsOptions()
-        --
-        --            -- Texture settings are loaded on the next frame, so we have to delay the
-        --            -- reset by 1 frame.  Do this by creating a timed callback for 0 seconds.
-        --            self:AddTimedCallback(
-        --                    function(self)
-        --                        Client.SetOptionInteger("graphics/display/quality", oldValue)
-        --                    end, 0.1)
-        --        end,
-        --
-        --        tooltip = Locale.ResolveString("OPTION_TEXTUREQUALITY"),
-        --    },
-        --
-        --    properties =
-        --    {
-        --        {"Label", Locale.ResolveString("TEXTURE_QUALITY")..": "},
-        --        {"Choices",
-        --         {
-        --             { value = 0, displayString = Locale.ResolveString("LOW") },
-        --             { value = 1, displayString = Locale.ResolveString("MEDIUM") },
-        --             { value = 2, displayString = Locale.ResolveString("HIGH") },
-        --         },
-        --        },
-        --    },
-        --}
 
         -- TODO(Salads): Create GUIConfig generator for interface files. Have them expandable so we can hide them depending on the selected AV.
     }

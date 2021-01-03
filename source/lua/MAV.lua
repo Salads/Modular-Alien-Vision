@@ -2,6 +2,7 @@
 Print("$ Loaded MAV.lua")
 
 Script.Load("lua/MAV_Globals.lua")
+Script.Load("lua/MAV_Logging.lua")
 Script.Load("lua/MAV_Utility.lua")
 Script.Load("lua/MAV_FileFetch.lua")
 Script.Load("lua/MAV_Validation.lua")

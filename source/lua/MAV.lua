@@ -47,6 +47,8 @@ function MAVRefreshAVSources()
     GetMAV()._ValidAVTables = validAVs
     GetMAV()._InvalidAVTables = invalidAvs
 
+    LogErrorsForAVTables(invalidAvs)
+
     -- TODO(Salads): Generate GUIConfigs for all of the AVs!
     local guiConfig = MAVGenerateGUIConfigs(avTables)
     GetMAV()._GUIConfig = guiConfig

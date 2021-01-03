@@ -51,6 +51,11 @@ function MAVCompileFiles(files)
                     {
                         id = fileAVIdentifier,
                         ignoredFiles = {},
+                        fileSetupErrors = {},
+                        parametersErrors =
+                        {
+                            conflicts = {}
+                        }
                     }
                 end
 

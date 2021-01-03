@@ -359,13 +359,6 @@ function MAVValidateInterface(avTable)
     local parameterNamesToParameterIndexes = {}
     local bitfieldConflictTable = {}
 
-    if not avTable.parametersErrors then
-        avTable.parametersErrors =
-        {
-            conflicts = {}
-        }
-    end
-
     for pIndex = 1, #interface.Parameters do
 
         table.insert(avTable.parametersErrors, {})
@@ -476,7 +469,7 @@ function MAVValidateInterface(avTable)
             table.insert(avTable.parametersErrors.conflicts,
                     string.format("Parameters at these indexes are using the same 'name' value [%s]: ( %s )",
                     pName,
-                    GetTableValuesString(parameterNamesToParameterIndexes)))
+                    GetTableValuesString(pIndexTable)))
             isValid = false
         end
     end
@@ -629,6 +622,9 @@ function MAVValidateAVTables(avTables)
         end
 
     end
+
+    validAVs._skippedFiles = avTables._skippedFiles
+    invalidAVs._skippedFiles = avTables._skippedFiles
 
     return validAVs, invalidAVs
 

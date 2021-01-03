@@ -489,7 +489,7 @@ function MAVValidateInterface(avTable)
         end
     end
 
-    return isValid
+    return isValid, interface
 
 end
 
@@ -604,7 +604,7 @@ function MAVValidateAVTables(avTables)
 
                 local interfaceValid = true
                 if avTable.interface then
-                    interfaceValid = MAVValidateInterface(avTable)
+                    interfaceValid, avTable.interfaceData = MAVValidateInterface(avTable)
                 end
 
                 -- If a AV has a interface specified, then that must be valid too.

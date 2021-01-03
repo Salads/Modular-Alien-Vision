@@ -49,8 +49,7 @@ function MAVRefreshAVSources()
 
     LogErrorsForAVTables(invalidAvs)
 
-    -- TODO(Salads): Generate GUIConfigs for all of the AVs!
-    local guiConfig = MAVGenerateGUIConfigs(avTables)
+    local guiConfig = MAVGenerateGUIConfigs(validAVs)
     GetMAV()._GUIConfig = guiConfig
 
     table.insert(gModsCategories, guiConfig)

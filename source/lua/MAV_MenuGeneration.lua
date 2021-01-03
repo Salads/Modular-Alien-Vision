@@ -99,7 +99,6 @@ function MAVGenerateGUIConfigContents(avTable)
         --    },
         --}
 
-        -- TODO(Salads): Validator for MAV AVs.
         -- TODO(Salads): Create GUIConfig generator for interface files. Have them expandable so we can hide them depending on the selected AV.
     }
 

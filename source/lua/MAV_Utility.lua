@@ -27,10 +27,14 @@ function MAVGetIsArray(test)
     for key, _ in pairs(test) do
 
         -- Lua arrays should have a contiguous sequence of numerical keys starting from 1.
-        if type(key) ~= "number" then return false end
+        if type(key) ~= "number" then
+            return false, string.format("Key '%s' is not a number", key)
+        end
 
         -- Lua arrays shouldn't have identical keys.
-        if table.contains(numericalKeys) then return false end
+        if table.contains(numericalKeys, key) then
+            return false, "Found repeated number key"
+        end
 
         table.insert(numericalKeys, key)
 
@@ -40,7 +44,7 @@ function MAVGetIsArray(test)
 
     for i = 1, #numericalKeys do
         if i ~= numericalKeys[i] then
-            return false
+            return false, "Array is sparse"
         end
     end
 

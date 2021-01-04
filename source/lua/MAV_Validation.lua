@@ -7,6 +7,7 @@ Script.Load("lua/MAV_Utility.lua")
 -- NOTE(Salads): Example JSON Structure for an interface file.
 --{ -- Root JSON Object.
 --
+--    "Label" : "Name to display your AV as in the MAV options."
 --    "Parameters" : [
 --    { -- Each Parameter is a JSON Object. Here is a description for each member.
 --
@@ -324,59 +325,9 @@ local kGuiTypeValidators =
     ["checkbox"] = ValidateInterfaceParameterGuiType_Checkbox,
 }
 
-function MAVValidateInterface(avTable)
+function MAVValidateInterfaceParameters(avTable, interface)
 
-    Print("$ MAVValidateInterface")
-
-    local interfaceTableFilename = avTable.interface
-    local interface
-
-    -- decode the interface json file.
-    local interfaceFile, errorStr, errorNo = io.open(interfaceTableFilename, "r")
-    if interfaceFile then
-
-        local _, error
-        interface, _, error = json.decode(interfaceFile:read("*all"))
-        io.close(interfaceFile)
-
-        if interface then
-
-            if not interface.Parameters then
-                Print(string.format("$ Could not decode interface file '%s' - Error: %s", interfaceTableFilename, error))
-                table.insert(avTable.fileSetupErrors, string.format("Could not decode interface file '%s' - Error: %s", interfaceTableFilename, error))
-                return false
-            end
-
-            if type(interface.Parameters) ~= "table" then
-                Print(string.format("$ 'Parameters' member in the interface file must be a JSON array of objects! Input Type: %s", type(interface.Parameters)))
-                table.insert(avTable.fileSetupErrors, string.format("'Parameters' member in the interface file must be a JSON array of objects!"))
-                return false
-            end
-
-            if not MAVGetIsArray(interface.Parameters) then
-                Print(string.format("$ 'Parameters' member in the interface file must be a JSON array of objects! (It is not an array!)"))
-                table.insert(avTable.fileSetupErrors, string.format("'Parameters' member in the interface file must be a JSON array of objects!"))
-                return false
-            end
-
-        else
-            Print(string.format("$ Could not decode interface file '%s' - Error: %s", interfaceTableFilename, error))
-            table.insert(avTable.fileSetupErrors, string.format("Could not decode interface file '%s' - Error: %s", interfaceTableFilename, error))
-            return false
-        end
-
-    else
-        Print(string.format("$ Could not open interface file '%s' - Error: %s (%s)", interfaceTableFilename, errorStr, errorNo))
-        table.insert(avTable.fileSetupErrors, string.format("Could not open interface file '%s' - Error: %s (%s)", interfaceTableFilename, errorStr, errorNo))
-        return false
-    end
-
-    Print("$ Interface file basic structure validated.")
-
-    -- At this point, the interface file exists, and was thrown into the "interface" variable, with the basic structure being validated.
-    -- All thats left is to validate each parameter.
     local isValid = true
-
     local parameterNamesToParameterIndexes = {}
     local bitfieldConflictTable = {}
 
@@ -486,8 +437,8 @@ function MAVValidateInterface(avTable)
         if #pIndexTable > 1 then
             table.insert(avTable.parametersErrors.conflicts,
                     string.format("Parameters at these indexes are using the same 'name' value [%s]: ( %s )",
-                    pName,
-                    GetTableValuesString(pIndexTable)))
+                            pName,
+                            GetTableValuesString(pIndexTable)))
             isValid = false
         end
     end
@@ -499,13 +450,74 @@ function MAVValidateInterface(avTable)
             if #usersTable > 1 then
                 table.insert(avTable.parametersErrors.conflicts,
                         string.format("Parameters at these indexes are using the same 'bitfieldId' (%s) and 'bitfieldIndex' (%s)! ( %s )",
-                        bitfieldId,
-                        bitfieldIndex,
-                        GetTableValuesString(usersTable)))
+                                bitfieldId,
+                                bitfieldIndex,
+                                GetTableValuesString(usersTable)))
                 isValid = false
             end
         end
     end
+
+    return isValid
+
+end
+
+function MAVValidateInterface(avTable)
+
+    local interfaceTableFilename = avTable.interface
+    local interface
+
+    -- decode the interface json file.
+    local interfaceFile, errorStr, errorNo = io.open(interfaceTableFilename, "r")
+    if interfaceFile then
+
+        local _, error
+        interface, _, error = json.decode(interfaceFile:read("*all"))
+        io.close(interfaceFile)
+
+        if not interface then
+            table.insert(avTable.fileSetupErrors, string.format("Could not decode interface file '%s' - Error: %s", interfaceTableFilename, error))
+            return false
+        end
+
+    else
+        table.insert(avTable.fileSetupErrors, string.format("Could not open interface file '%s' - Error: %s (%s)", interfaceTableFilename, errorStr, errorNo))
+        return false
+    end
+
+    local isValid = true
+
+    -- Parameters json member is optional.
+    if interface.Parameters then
+
+        if type(interface.Parameters) ~= "table" then
+            table.insert(avTable.fileSetupErrors, string.format("'Parameters' member in the interface file must be a JSON array of objects! (Not a table)"))
+            return false
+        end
+
+        local isArray, error = MAVGetIsArray(interface.Parameters)
+        if not isArray then
+            table.insert(avTable.fileSetupErrors, string.format("'Parameters' member in the interface file must be a JSON array of objects! (Not an array: %s)", error))
+            return false
+        end
+
+        local parameterNotTablesIndexes = {}
+        for i = 1, #interface.Parameters do
+            if type(interface.Parameters[i]) ~= "table" then
+                table.insert(parameterNotTablesIndexes, i)
+            end
+        end
+
+        if #parameterNotTablesIndexes > 0 then
+            table.insert(avTable.fileSetupErrors, string.format("The parameters at these indexes are not JSON Objects! ( %s )", GetTableValuesString(parameterNotTablesIndexes)))
+            return
+        end
+
+        isValid = isValid and MAVValidateInterfaceParameters(avTable, interface)
+
+    end
+
+
 
     return isValid, interface
 
@@ -620,12 +632,10 @@ function MAVValidateAVTables(avTables)
 
             if valid then
 
+                -- Validate the interface. At least some of it is required for GUI purposes.
                 local interfaceValid = true
-                if avTable.interface then
-                    interfaceValid, avTable.interfaceData = MAVValidateInterface(avTable)
-                end
+                interfaceValid, avTable.interfaceData = MAVValidateInterface(avTable)
 
-                -- If a AV has a interface specified, then that must be valid too.
                 valid = valid and interfaceValid
             end
 

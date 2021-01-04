@@ -120,7 +120,7 @@ local function ValidateInterfaceParameterSetting_Number(parameterVar, parameterN
 
     if not MAVCheckType(parameterVar, "number") then
         if required or parameterVar ~= nil then
-            table.insert(errorTable, string.format("%s setting '%s' is required, and must be a number!", kOptionalOrRequiredStr[required], parameterName))
+            table.insert(errorTable, string.format("%s setting '%s'  must be a number!", kOptionalOrRequiredStr[required], parameterName))
             isValid = false
         end
     end
@@ -292,8 +292,17 @@ local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, errorT
 end
 
 local function ValidateInterfaceParameterGuiType_Checkbox(parameterTable, errorTable)
-    -- There are no specific interface settings for the checkbox!
-    return true
+
+    -- Make sure the 'default' parameter setting is either 0 or 1.
+
+    local valid = true
+    local default = parameterTable.default
+    if default ~= 1 and default ~= 0 then
+        table.insert(errorTable, string.format("'default' setting for a checkbox must be either 0 or 1! ( Was set to %s )", tostring(default)))
+        valid = false
+    end
+
+    return valid
 end
 
 local kGuiTypeValidators =

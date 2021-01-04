@@ -183,7 +183,7 @@ local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, errorT
         isValid = false
     end
 
-    if isValid and not #parameterTable.choices > 0 then
+    if isValid and not (#parameterTable.choices > 0) then
         table.insert(errorTable, string.format("%s setting '%s' has zero choices! (Empty)", kOptionalOrRequiredStr[true], "choices"))
         isValid = false
     end
@@ -199,6 +199,7 @@ local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, errorT
 
         local invalidChoices_ValueToChoiceIndexes = {}
 
+        local defaultValid = false
         for i = 1, #parameterTable.choices do
 
             local choiceValid = true
@@ -253,10 +254,19 @@ local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, errorT
                 end
             end
 
+            if choiceTable.value == parameterTable.default then
+                defaultValid = true
+            end
+
             if not choiceValid then
                 isValid = false
             end
 
+        end
+
+        if not defaultValid then
+            table.insert(errorTable, string.format("'default' parameter setting (%s) does not exist within dropdown choice values!", parameterTable.default))
+            isValid = false
         end
 
         -- Now that we've recorded all the info required for error checking,
@@ -292,12 +302,6 @@ local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, errorT
 
         end
 
-    end
-
-    -- Validate the 'default' parameter setting. Since in a dropdown, the value can be anything, just set it to the first value in the choice
-    -- table if its all valid.
-    if isValid and #parameterTable.choices > 0 then
-        parameterTable.default = parameterTable.choices[1].value
     end
 
     return isValid

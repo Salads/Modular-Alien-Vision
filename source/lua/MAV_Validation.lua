@@ -29,7 +29,7 @@ Script.Load("lua/MAV_Utility.lua")
 --        minValue = "Minimum value the slider should allow.",
 --        maxValue = "Maximum value the slider should allow.",
 --
---        decimalPlaces = "Number of decimal units to include. Ex: 2 = 1.25, 3 = 1.253, etc..", -- OPTIONAL (slider), but 2 by default.
+--        decimalPlaces = "Number of decimal units to include. Ex: 2 = 1.25, 3 = 1.253, etc..", -- OPTIONAL (slider), but 0 by default.
 --
 --        -- REQUIRED 'dropdown' specific options
 --        choices = "A table that specifies the value a dropdown option represents, and the label for that option."
@@ -150,8 +150,8 @@ local function ValidateInterfaceParameterGuiType_Slider(parameterTable, errorTab
 
     -- Make sure that minValue is less than maxValue
     if isValid then
-        if (parameterTable.minValue < parameterTable.maxValue) then
-            table.insert(errorTable, string.format("minValue must be less than maxValue for 'slider' guiType!"))
+        if (parameterTable.minValue >= parameterTable.maxValue) then
+            table.insert(errorTable, string.format("minValue must be less than maxValue for 'slider' guiType! ( min: %s, max: %s )", parameterTable.minValue, parameterTable.maxValue))
             isValid = false
         end
     end

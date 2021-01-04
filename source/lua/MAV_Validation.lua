@@ -487,6 +487,17 @@ function MAVValidateInterface(avTable)
 
     local isValid = true
 
+    if not interface.Label then
+        table.insert(avTable.fileSetupErrors, string.format("'Label' member in the interface file must be a JSON string! (Does not exist)"))
+        return false
+    elseif not MAVCheckType(interface.Label, "string") then
+        table.insert(avTable.fileSetupErrors, string.format("'Label' member in the interface file must be a JSON string! (Not a string!)"))
+        return false
+    elseif (interface.Label):len() <= 0 then
+        table.insert(avTable.fileSetupErrors, string.format("'Label' member in the interface file must be a JSON string with at least one character!"))
+        return false
+    end
+
     -- Parameters json member is optional.
     if interface.Parameters then
 
@@ -516,8 +527,6 @@ function MAVValidateInterface(avTable)
         isValid = isValid and MAVValidateInterfaceParameters(avTable, interface)
 
     end
-
-
 
     return isValid, interface
 

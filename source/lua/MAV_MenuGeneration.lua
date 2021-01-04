@@ -53,7 +53,7 @@ local function GetAVChoices(avTable)
     table.insert(choicesTable, { value = "default", displayString = "Default" })
 
     for i = 1, #avTable do
-        table.insert(choicesTable, { value = avTable[i].id, displayString = avTable[i].id })
+        table.insert(choicesTable, { value = avTable[i].id, displayString = avTable[i].interfaceData.Label })
     end
 
     return choicesTable

@@ -19,8 +19,8 @@ local function GenerateInterface_Slider(avId, interfaceData)
 
             label = interfaceData.label,
 
-            toolTip = interfaceData.toolTip,
-            toolTipIcon = interfaceData.toolTipIcon
+            tooltip = interfaceData.tooltip,
+            tooltipIcon = interfaceData.tooltipIcon
         },
 
         postInit = function(self)

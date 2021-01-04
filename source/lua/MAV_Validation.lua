@@ -21,8 +21,8 @@ Script.Load("lua/MAV_Utility.lua")
 --        bitfieldIndex = "The bit index that this parameter should set. 20 MAX. (Safe(er?) side of c++ floating point decimal unit capacity)",
 --
 --        -- OPTIONAL common members.
---        tooltip = "Text that shows up when user is hovering their mouse over the control.",
---        tooltipIcon = "Path to a image to use with the tooltip.",
+--        toolTip = "Text that shows up when user is hovering their mouse over the control.",
+--        toolTipIcon = "Path to a image to use with the tooltip.",
 --
 --        -- REQUIRED 'slider' specific options
 --        minValue = "Minimum value the slider should allow.",
@@ -145,6 +145,7 @@ local function ValidateInterfaceParameterGuiType_Slider(parameterTable, errorTab
     -- Validate required options.
     isValid = isValid and ValidateInterfaceParameterSetting_Number(parameterTable.minValue, "minValue", true, errorTable )
     isValid = isValid and ValidateInterfaceParameterSetting_Number(parameterTable.maxValue, "maxValue", true, errorTable )
+    isValid = isValid and ValidateInterfaceParameterSetting_Number(parameterTable.default, "default", true, errorTable )
 
     -- Make sure that minValue is less than maxValue
     if isValid then
@@ -181,7 +182,12 @@ local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, errorT
         isValid = false
     end
 
-    -- Make sure each choices table member is also a table.
+    if isValid and not #parameterTable.choices > 0 then
+        table.insert(errorTable, string.format("%s setting '%s' has zero choices! (Empty)", kOptionalOrRequiredStr[true], "choices"))
+        isValid = false
+    end
+
+    -- Validate every choice table.
     if isValid then
 
         local invalidChoices_NotTableIndexes = {}
@@ -287,6 +293,12 @@ local function ValidateInterfaceParameterGuiType_Dropdown(parameterTable, errorT
 
     end
 
+    -- Validate the 'default' parameter setting. Since in a dropdown, the value can be anything, just set it to the first value in the choice
+    -- table if its all valid.
+    if isValid and #parameterTable.choices > 0 then
+        parameterTable.default = parameterTable.choices[1].value
+    end
+
     return isValid
 
 end
@@ -297,8 +309,8 @@ local function ValidateInterfaceParameterGuiType_Checkbox(parameterTable, errorT
 
     local valid = true
     local default = parameterTable.default
-    if default ~= 1 and default ~= 0 then
-        table.insert(errorTable, string.format("'default' setting for a checkbox must be either 0 or 1! ( Was set to %s )", tostring(default)))
+    if type(default) ~= "boolean" then
+        table.insert(errorTable, string.format("'default' setting for a checkbox must be either true or false! ( Was set to %s )", tostring(default)))
         valid = false
     end
 
@@ -392,14 +404,11 @@ function MAVValidateInterface(avTable)
         local labelValid   = ValidateInterfaceParameterSetting_String(parameter.label, "label", true, parameterErrorTable)
         isValid = isValid and labelValid
 
-        local defaultValid = ValidateInterfaceParameterSetting_Number(parameter.default, "default", true, parameterErrorTable)
-        isValid = isValid and defaultValid
-
         local guiTypeValid = ValidateInterfaceParameterSetting_StringSet(parameter.guiType, "guiType", true, parameterErrorTable, kGuiTypes)
         isValid = isValid and guiTypeValid
 
         -- Validate GUIType specific options.
-        if (labelValid and defaultValid and guiTypeValid) then
+        if (labelValid and guiTypeValid) then
             isValid = isValid and kGuiTypeValidators[parameter.guiType](parameter, parameterErrorTable)
         end
 

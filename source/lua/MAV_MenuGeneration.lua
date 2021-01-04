@@ -4,9 +4,11 @@ Print("$ Loaded MAV_MenuGeneration.lua")
 Script.Load("lua/menu2/NavBar/Screens/Options/Mods/ModsMenuData.lua")
 Script.Load("lua/GUIMenuErrorsButton.lua")
 Script.Load("lua/menu2/MenuDataUtils.lua")
+Script.Load("lua/GUI/wrappers/WrapperUtility.lua")
+Script.Load("lua/MAV_GUIGenerators.lua")
 
 -- TODO(Salads): Locale
-function MAVGenerateGUIConfigs(avTable)
+function MAVGenerateGUIConfigs(avTables)
 
     -- Create the GUIObjects that will hold all of our MAV related GUIObjects.
     local containerGUIConfig =
@@ -25,7 +27,7 @@ function MAVGenerateGUIConfigs(avTable)
         contentsConfig = ModsMenuUtils.CreateBasicModsMenuContents
         {
             layoutName = "advancedOptions",
-            contents = MAVGenerateGUIConfigContents(avTable),
+            contents = MAVGenerateGUIConfigContents(avTables),
         }
     }
 
@@ -58,9 +60,9 @@ local function GetAVChoices(avTable)
 
 end
 
-function MAVGenerateGUIConfigContents(avTable)
+function MAVGenerateGUIConfigContents(avTables)
 
-    return
+    local avGUIConfigs =
     {
         -- TODO(Salads): Create MAV top-level controls. (Select AV, Show Errors Button, etc)
         { -- Button to show a window that lists all errors.
@@ -72,7 +74,7 @@ function MAVGenerateGUIConfigContents(avTable)
             },
             postInit =
             {
-                function(self) self:AlignTop() self:AlignRight() end,
+                function(self) self:AlignTop() self:AlignLeft() end,
             },
 
         },
@@ -87,17 +89,82 @@ function MAVGenerateGUIConfigContents(avTable)
                 immediateUpdate = function(self)
                 end,
 
-                tooltip = "Choose your Alien Vision",
+                toolTip = "Choose your Alien Vision",
             },
 
             properties =
             {
                 {"Label", "Alien Vision: "},
-                {"Choices", GetAVChoices(avTable) },
+                {"Choices", GetAVChoices(avTables) },
             },
+
+            postInit =
+            {
+                function(self) self:AlignCenter() end,
+            }
+        },
+        {
+            name = "avDivider",
+            class = GUIMenuDividerWidget,
+
+            properties =
+            {
+                {"Label", "=== AV-Specific Options ==="}
+            },
+
+            postInit =
+            {
+                function(self) self:AlignCenter() end,
+            }
         }
 
-        -- TODO(Salads): Create GUIConfig generator for interface files. Have them expandable so we can hide them depending on the selected AV.
     }
+
+    for i = 1, #avTables do
+        table.insert(avGUIConfigs, GetGUIConfigForAV(avTables[i]))
+    end
+
+    return avGUIConfigs
+
+end
+
+ExpandableGUIListLayout = GetMultiWrappedClass(GUIListLayout, {"Expandable"})
+
+function GetGUIConfigForAV(avTable)
+
+    return
+    {
+        name = string.format("mav_%s_rootExpandableListLayout", avTable.id),
+        class = ExpandableGUIListLayout,
+        params =
+        {
+            orientation = "vertical",
+            expanded = true
+        },
+        properties =
+        {
+            {"FrontPadding", 0},
+            {"BackPadding", 0},
+            {"Spacing", 32},
+        },
+
+        children = GetGUIConfigForAVInterface(avTable),
+
+        postInit = function(self)
+            self:AlignCenter()
+        end
+    }
+
+end
+
+function GetGUIConfigForAVInterface(avTable)
+
+    local avParameterGUIConfigs = {}
+
+    for i = 1, #avTable.interfaceData.Parameters do
+        table.insert(avParameterGUIConfigs, MAV_GenerateGUIConfigForParameter(avTable.id, avTable.interfaceData.Parameters[i]))
+    end
+
+    return avParameterGUIConfigs
 
 end

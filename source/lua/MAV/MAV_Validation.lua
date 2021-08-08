@@ -37,8 +37,6 @@ Script.Load("lua/MAV_Utility.lua")
 --        -- 'checkbox' specific options
 --        -- No specific options!
 --    },
----- And so on...
---]
 --}
 
 local kMAXBitsPerBitfield = 20 -- Could be up to, say, 22 but i'm just cutting it safe.

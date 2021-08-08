@@ -1,0 +1,55 @@
+{ -- Root JSON Object. Always required.
+
+    "MAVTitle" : "Example AV", -- string, title/label to display your av as in the options menu.
+	"ScreenFX" : "ExampleAV.screenfx", -- string, filename of the screenfx file for your AV. The .shader file should be specified in it, which should also specify the .hlsl file
+    "Settings" : -- array of unnamed json objects, each object defines a configurable shader parameter.
+	[
+		{ - -Example parameter object. Showing all possible members, for all types.
+
+			-- REQUIRED
+			ParameterName = string, Parameter Name. ( Will be passed into shader exactly as specified here )
+			GUILabel      = string, Parameter label, for displaying to the client.
+			DefaultValue  = number, Default value of the parameter.
+			GUIType       = string, ( 'slider', 'dropdown', 'checkbox' )
+			
+			-- OPTIONAL, Any GUIType can use these.
+			Tooltip      = string, Text that shows up when user is hovering their mouse over the control.
+			TooltipImage = string, Path to a image to use with the tooltip.
+			BitfieldLShift = number (integer), How many bits to shift the setting's value left. Max shift is 22. If specified, ParameterName will now be a bitfield name.
+			
+			////////////////////////////
+			// MAV GUI TYPES SETTINGS //
+			////////////////////////////
+			
+			---------------------
+			-- SLIDER Settings --
+			---------------------
+			
+			-- REQUIRED
+			MinValue      = number, Minimum value the slider should allow.
+			MaxValue      = number, Maximum value the slider should allow.
+			
+			-- OPTIONAL
+			DecimalPlaces = number, Number of decimal units to include. Ex: 2 = 1.25, 3 = 1.253, etc (0 by default)
+			
+			-----------------------
+            -- DROPDOWN Settings --
+			-----------------------
+			
+			-- REQUIRED
+			Choices = table, A table that specifies the value a dropdown option represents, and the label for that option.
+			{
+				{ -- Choice #1
+					Value = number, Value that this dropdown choice represents.
+					DisplayTitle = string, Label for this choice.
+				},
+				-- Choice #2... etc
+			}
+
+			-----------------------
+			-- CHECKBOX Settings --
+			-----------------------
+			Nothing for checkbox!
+		}
+	]
+}

@@ -8,6 +8,21 @@ kReservedIdentifiers = set
     "_skippedFiles" -- For debug information.
 }
 
+kMAV_FileTypes = enum(
+{
+    'interface',
+    'hlsl',
+    'screenfx',
+    'shader'
+})
+
+kMAV_ErrorTypes = enum(
+{
+    'NoError',
+    'FileMissing',
+    'InterfaceInvalidJson'
+})
+
 kGuiTypes = set
 {
     "slider",
